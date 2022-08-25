@@ -1,98 +1,39 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="theme-color" content="#000000">
-    <meta name="name" content="PyScript/Panel KMeans Demo">
+import panel as pn
+import sklearn.linear_model as linear_model
+import sklearn.svm as svm
+import sklearn.datasets as datasets
+from sklearn.model_selection import cross_val_score
 
-    <title>Pyscript/Panel KMeans Demo</title>
-    <link rel="icon" type="image/x-icon" href="./favicon.png">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" type="text/css" />
-    <link rel="stylesheet" href="https://unpkg.com/@holoviz/panel@0.13.1/dist/css/widgets.css" type="text/css" />
-    <link rel="stylesheet" href="https://unpkg.com/@holoviz/panel@0.13.1/dist/css/markdown.css" type="text/css" />
+pn.config.sizing_mode = 'stretch_width'
 
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega@5"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
-    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.9.3/dist/js/tabulator.js"></script>
-    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.4.2.js"></script>
-    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.4.2.min.js"></script>
-    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.4.2.min.js"></script>
-    <script type="text/javascript" src="https://unpkg.com/@holoviz/panel@0.13.1/dist/panel.min.js"></script>
-    <script type="text/javascript">
-      Bokeh.set_log_level("info");
-    </script>
+ds_opts = {'iris': datasets.load_iris, 'digits': datasets.load_digits}
+algorithms = {'LinearRegression': linear_model.LinearRegression, 'SVC': svm.SVC}
+evaluators = ['accuracy', 'adjusted_mutual_info_score', 'neg_mean_absolute_error']
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/@holoviz/panel@0.13.1/dist/bundled/bootstraptemplate/bootstrap.css">
-    <link rel="stylesheet" href="https://unpkg.com/@holoviz/panel@0.13.1/dist/bundled/defaulttheme/default.css">
+ds_widgets = pn.widgets.Select(name='Dataset', options=list(ds_opts.keys())).servable(target='ds-widget')
+algo_widgets = pn.widgets.Select(name='Algorithms', options=list(algorithms.keys())).servable(target='algo-widget')
+eval_widgets = pn.widgets.Select(name='Evaluator', options=evaluators).servable(target='eval-widget')
+cv_widgets = pn.widgets.IntSlider(name='Folds', start=1, end=10, value=5).servable(target='cv-widget')
 
-    <style>
-      #sidebar {
-	  width: 350px;
-      }
-    </style>
 
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"></script>
+def get_settings():
+    return f'Dataset: {ds_widgets.value}\nAlgorithm: {algo_widgets.value}\nEvaluator: {eval_widgets.value}\n'
 
-    <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
-    <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
-  </head>
 
-  <py-env>
-    - numpy
-    - pandas
-    - scikit-learn
-    - panel==0.13.1
-  </py-env>
+settings = pn.pane.Str(get_settings()).servable(target='settings')
+result = pn.pane.Str('').servable(target='result')
 
-  <body>
-    <div class="container-fluid d-flex flex-column vh-100 overflow-hidden" id="container">
-      <nav class="navbar navbar-expand-md navbar-dark sticky-top shadow" id="header" style="background-color: #000000;">
-	<button type="button" class="navbar-toggle collapsed" id="sidebarCollapse">
-	  <span class="navbar-toggler-icon"></span>
-	</button>
-	<div class="app-header">
-	  <a class="navbar-brand app-logo" href="/">
-	    <img src="./logo.png" class="app-logo">
-	  </a>
-	  <a class="title" href="" style="color: #f0ab3c;">Scikit Learn Demo</a>
-	</div>
-      </nav>
 
-      <div class="row overflow-hidden" id="content">
-	<div class="sidenav" id="sidebar">
-	  <ul class="nav flex-column">
-            <div class="bk-root" id="ds-widget"></div>
-            <div class="bk-root" id="algo-widget"></div>
-            <div class="bk-root" id="eval-widget"></div>
-            <div class="bk-root" id="cv-widget"></div>
-            <div class="bk-root" id="start-btn"></div>
-	  </ul>
-	</div>
-	<div class="col mh-100 float-left" id="main">
-	  <div class="bk-root" id="settings"></div>
-	  <div class="bk-root" id="result"></div>
-	  <div class="bk-root" id="table"></div>
-	</div>
-      </div>
-    </div>
+def train(event=None):
+    settings.object = get_settings()
+    ds = ds_opts[ds_widgets.value]()
+    model = algorithms[algo_widgets.value]()
 
-    <py-script src="skl.py"></py-script>
+    cv_result = cross_val_score(model, ds.data, ds.target, cv=cv_widgets.value, scoring=eval_widgets.value)
 
-    <script>
-      $(document).ready(function () {
-        $('#sidebarCollapse').on('click', function () {
-        $('#sidebar').toggleClass('active')
-        $(this).toggleClass('active')
-        var interval = setInterval(function () { window.dispatchEvent(new Event('resize')); }, 10);
-          setTimeout(function () { clearInterval(interval) }, 210)
-        });
-      });
-    </script>
-  </body>
-</html>
+    result.object = cv_result
+
+
+start_btn = pn.widgets.button.Button(name='start').servable(target='start-btn').on_click(train)
+
