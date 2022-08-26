@@ -14,7 +14,7 @@ evaluators = ['neg_mean_absolute_error', 'accuracy']
 ds_widgets = pn.widgets.Select(name='Dataset', options=list(ds_opts.keys())).servable(target='ds-widget')
 algo_widgets = pn.widgets.Select(name='Algorithms', options=list(algorithms.keys())).servable(target='algo-widget')
 metrics_widgets = pn.widgets.Select(name='Metrics', options=evaluators).servable(target='metrics-widget')
-cv_widgets = pn.widgets.IntSlider(name='Folds', start=1, end=10, value=5).servable(target='cv-widget')
+cv_widgets = pn.widgets.IntInput(name='Cross-Validation Folds', value=10).servable(target='cv-widget')
 
 
 def get_settings():
