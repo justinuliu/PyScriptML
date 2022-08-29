@@ -5,6 +5,7 @@ import sklearn.datasets as datasets
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
+from datetime import datetime
 
 pn.config.sizing_mode = 'stretch_width'
 
@@ -21,8 +22,10 @@ cv_widget.visible = False
 ps_widget = pn.widgets.IntInput(name='Train size (%)', value=66).servable(target='ps-widget')
 ps_widget.visible = False
 
+result_pane = pn.pane.Str('').servable(target='result')
 
-def test_option_changed(event=None):
+
+def on_test_option_changed(event=None):
     if event.new == 'Use training set':
         cv_widget.visible = False
         ps_widget.visible = False
@@ -39,36 +42,50 @@ test_options_widget = pn.widgets.RadioBoxGroup(name='Test options',
                                                         'Cross-validation',
                                                         'Percentage split']).servable(target='test-options-widget')
 
-test_options_widget.param.watch(test_option_changed, 'value')
+test_options_widget.param.watch(on_test_option_changed, 'value')
+
+results = {}
+
+
+def on_result_list_changed(event=None):
+    global result_pane
+    result_pane.object = results[event.new]
+
+
+result_list_widget = pn.widgets.Select(name='Result list', options=[], size=8).servable(target='result-list-widget')
+result_list_widget.param.watch(on_result_list_changed, 'value')
 
 
 def get_settings():
-    return f'Dataset: {ds_widget.value}\nAlgorithm: {algo_widget.value}\nEvaluator: {metrics_widget.value}\n'
-
-
-settings_pane = pn.pane.Str(get_settings()).servable(target='settings')
-result_pane = pn.pane.Str('').servable(target='result')
+    return f'Dataset: {ds_widget.value}\nAlgorithm: {algo_widget.value}\nEvaluator: {metrics_widget.value}\nTest ' \
+           f'option: {test_options_widget.value}\n'
 
 
 def evaluate(event=None):
-    settings_pane.object = get_settings()
     ds = ds_opts[ds_widget.value]()
     model = classifier_opts[algo_widget.value]()
+    score = None
 
     if test_options_widget.value == 'Use training set':
         model.fit(ds.data, ds.target)
         pred = model.predict(ds.data)
         score = metrics_opts[metrics_widget.value](ds.target, pred)
-        result_pane.object = score
     elif test_options_widget.value == 'Cross-validation':
-        cv_result = cross_val_score(model, ds.data, ds.target, cv=cv_widget.value, scoring=metrics_widget.value)
-        result_pane.object = cv_result
+        score = cross_val_score(model, ds.data, ds.target, cv=cv_widget.value, scoring=metrics_widget.value)
     elif test_options_widget.value == 'Percentage split':
-        X_train, X_test, y_train, y_test = train_test_split(ds.data, ds.target, train_size=ps_widget.value/100)
+        X_train, X_test, y_train, y_test = train_test_split(ds.data, ds.target, train_size=ps_widget.value / 100)
         model.fit(X_train, y_train)
         pred = model.predict(X_test)
         score = metrics_opts[metrics_widget.value](y_test, pred)
-        result_pane.object = score
+
+    output = f'{get_settings()}\n{score}'
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    key = f'{current_time} - {ds_widget.value} - {algo_widget.value}'
+    results[key] = output
+
+    result_list_widget.options = list(results.keys())
+    result_list_widget.value = key
 
 
 start_btn = pn.widgets.button.Button(name='start').servable(target='start-btn').on_click(evaluate)
