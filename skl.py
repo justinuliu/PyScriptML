@@ -56,9 +56,18 @@ result_list_widget = pn.widgets.Select(name='Result list', options=[], size=8).s
 result_list_widget.param.watch(on_result_list_changed, 'value')
 
 
-def get_settings():
-    return f'Dataset: {ds_widget.value}\nAlgorithm: {algo_widget.value}\nEvaluator: {metrics_widget.value}\nTest ' \
-           f'option: {test_options_widget.value}\n'
+def get_run_information():
+    ds = ds_opts[ds_widget.value]()
+    info = '=== Run information ===\n\n'
+    info += f'Scheme:\t{algo_widget.value}\n'
+    info += f'Relation:\t{ds_widget.value}\n'
+    info += f'Instances:\t{len(ds.data)}\n'
+    info += f'Attributes:\t{len(ds.feature_names)}\n'
+    for a in ds.feature_names:
+        info += '\t\t\t' + a + '\n'
+    info += f'Test mode:\t{test_options_widget.value}\n'
+
+    return info
 
 
 def evaluate(event=None):
@@ -78,7 +87,7 @@ def evaluate(event=None):
         pred = model.predict(X_test)
         score = metrics_opts[metrics_widget.value](y_test, pred)
 
-    output = f'{get_settings()}\n{score}'
+    output = f'{get_run_information()}\n{score}'
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     key = f'{current_time} - {ds_widget.value} - {algo_widget.value}'
@@ -86,6 +95,18 @@ def evaluate(event=None):
 
     result_list_widget.options = list(results.keys())
     result_list_widget.value = key
+
+
+def get_classifier_model():
+    pass
+
+
+def get_stratified_cross_validation():
+    pass
+
+
+def get_summary():
+    pass
 
 
 start_btn = pn.widgets.button.Button(name='start').servable(target='start-btn').on_click(evaluate)
