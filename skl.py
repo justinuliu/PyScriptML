@@ -9,6 +9,7 @@ from datetime import datetime
 from sklearn.base import is_classifier, is_regressor
 from scipy.stats import pearsonr
 import math
+import numpy as np
 
 pn.config.sizing_mode = 'stretch_width'
 
@@ -112,22 +113,39 @@ def evaluate(event=None):
     result_list_widget.value = key
 
 
+def get_detailed_accuracy_by_class():
+    pass
+
+
+def get_confusion_matrix():
+    pass
+
+
 def get_summary(model, pred, target):
     info = '=== Summary ===\n'
     info += '\n'
+    mean_abs_err = metrics.mean_absolute_error(target, pred)
+    mean_prior_abs_error = metrics.mean_absolute_error(target, [1 / len(target)] * len(target))
+    root_mean_squared_err = math.sqrt(metrics.mean_squared_error(target, pred))
+    root_mean_prior_squared_err = math.sqrt(metrics.mean_squared_error(target, [1 / len(target)] * len(target)))
     if is_regressor(model):
         info += f'Correlation coefficient:\t\t{pearsonr(pred, target)[0]:.4f}\n'
-        mean_abs_err = metrics.mean_absolute_error(target, pred)
         info += f'Mean absolute error:\t\t\t{mean_abs_err:.4f}\n'
-        root_mean_squared_err = math.sqrt(metrics.mean_squared_error(target, pred))
         info += f'Root mean squared error:\t\t{root_mean_squared_err:.4f}\n'
-        mean_prior_abs_error = metrics.mean_absolute_error(target, [1/len(target)]*len(target))
         info += f'Relative absolute error:\t\t{100 * mean_abs_err / mean_prior_abs_error:.4f} %\n'
-        root_mean_prior_squared_err = math.sqrt(metrics.mean_squared_error(target, [1/len(target)]*len(target)))
         info += f'Root relative squared error:\t{100 * root_mean_squared_err / root_mean_prior_squared_err:.4f} %\n'
         info += f'Total Number of Instances:\t\t{len(target)}\n'
     elif is_classifier(model):
-        pass
+        correct_sum = np.sum(target == pred)
+        incorrect_sum = np.sum(target != pred)
+        info += f'Correctly Classified Instances:\t\t{correct_sum}\t\t{100*correct_sum/len(target):.4f} %\n'
+        info += f'Incorrectly Classified Instances:\t{incorrect_sum}\t\t{100*incorrect_sum/len(target):.4f} %\n'
+        info += f'Kappa statistic:\t\t\t\t\t{metrics.cohen_kappa_score(target, pred):.4f}\n'
+        info += f'Mean absolute error:\t\t\t\t{metrics.mean_absolute_error(target, pred):.4f}\n'
+        info += f'Root mean squared error:\t\t\t{math.sqrt(metrics.mean_squared_error(target, pred)):.4f}\n'
+        info += f'Relative absolute error:\t\t\t{100 * mean_abs_err / mean_prior_abs_error:.4f} %\n'
+        info += f'Root relative squared error:\t\t{100 * root_mean_squared_err / root_mean_prior_squared_err:.4f} %\n'
+        info += f'Total Number of Instances:\t\t\t{len(target)}\n'
     else:
         raise Exception("Unknown type of model:" + str(model))
 
