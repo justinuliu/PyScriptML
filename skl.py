@@ -70,6 +70,16 @@ def get_run_information():
     return info
 
 
+def get_classifier_model(model):
+    info = f'=== Classifier model ({test_options_widget.value}) ===\n'
+    info += '\n'
+    info += algo_widget.value + '\n'
+    info += '=============\n'
+    info += '\n'
+    info += 'Should show details respect to the model!\n'
+    return info
+
+
 def evaluate(event=None):
     ds = ds_opts[ds_widget.value]()
     model = classifier_opts[algo_widget.value]()
@@ -87,7 +97,8 @@ def evaluate(event=None):
         pred = model.predict(X_test)
         score = metrics_opts[metrics_widget.value](y_test, pred)
 
-    output = f'{get_run_information()}\n{score}'
+    output = f'{get_run_information()}\n{score}\n\n'
+    output += get_classifier_model(model)
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     key = f'{current_time} - {ds_widget.value} - {algo_widget.value}'
@@ -95,10 +106,6 @@ def evaluate(event=None):
 
     result_list_widget.options = list(results.keys())
     result_list_widget.value = key
-
-
-def get_classifier_model():
-    pass
 
 
 def get_stratified_cross_validation():
