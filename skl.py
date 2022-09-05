@@ -6,6 +6,9 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from datetime import datetime
+from sklearn.base import is_classifier, is_regressor
+from scipy.stats import pearsonr
+import math
 
 pn.config.sizing_mode = 'stretch_width'
 
@@ -98,7 +101,8 @@ def evaluate(event=None):
         score = metrics_opts[metrics_widget.value](y_test, pred)
 
     output = f'{get_run_information()}\n{score}\n\n'
-    output += get_classifier_model(model)
+    output += get_classifier_model(model) + '\n'
+    output += get_summary(model, pred, ds.target)
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     key = f'{current_time} - {ds_widget.value} - {algo_widget.value}'
@@ -108,12 +112,26 @@ def evaluate(event=None):
     result_list_widget.value = key
 
 
-def get_stratified_cross_validation():
-    pass
+def get_summary(model, pred, target):
+    info = '=== Summary ===\n'
+    info += '\n'
+    if is_regressor(model):
+        info += f'Correlation coefficient:\t\t{pearsonr(pred, target)[0]:.4f}\n'
+        mean_abs_err = metrics.mean_absolute_error(target, pred)
+        info += f'Mean absolute error:\t\t\t{mean_abs_err:.4f}\n'
+        root_mean_squared_err = math.sqrt(metrics.mean_squared_error(target, pred))
+        info += f'Root mean squared error:\t\t{root_mean_squared_err:.4f}\n'
+        mean_prior_abs_error = metrics.mean_absolute_error(target, [1/len(target)]*len(target))
+        info += f'Relative absolute error:\t\t{100 * mean_abs_err / mean_prior_abs_error:.4f} %\n'
+        root_mean_prior_squared_err = math.sqrt(metrics.mean_squared_error(target, [1/len(target)]*len(target)))
+        info += f'Root relative squared error:\t{100 * root_mean_squared_err / root_mean_prior_squared_err:.4f} %\n'
+        info += f'Total Number of Instances:\t\t{len(target)}\n'
+    elif is_classifier(model):
+        pass
+    else:
+        raise Exception("Unknown type of model:" + str(model))
 
-
-def get_summary():
-    pass
+    return info
 
 
 start_btn = pn.widgets.button.Button(name='start').servable(target='start-btn').on_click(evaluate)
