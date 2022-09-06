@@ -3,7 +3,7 @@ import sklearn.linear_model as linear_model
 import sklearn.svm as svm
 import sklearn.datasets as datasets
 from sklearn.metrics import classification_report
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_predict
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from datetime import datetime
@@ -88,21 +88,18 @@ def get_classifier_model(model):
 def evaluate(event=None):
     ds = ds_opts[ds_widget.value]()
     model = classifier_opts[algo_widget.value]()
-    score = None
 
     if test_options_widget.value == 'Use training set':
         model.fit(ds.data, ds.target)
         pred = model.predict(ds.data)
-        score = metrics_opts[metrics_widget.value](ds.target, pred)
     elif test_options_widget.value == 'Cross-validation':
-        score = cross_val_score(model, ds.data, ds.target, cv=cv_widget.value, scoring=metrics_widget.value)
+        pred = cross_val_predict(model, ds.data, ds.target, cv=cv_widget.value)
     elif test_options_widget.value == 'Percentage split':
         X_train, X_test, y_train, y_test = train_test_split(ds.data, ds.target, train_size=ps_widget.value / 100)
         model.fit(X_train, y_train)
         pred = model.predict(X_test)
-        score = metrics_opts[metrics_widget.value](y_test, pred)
 
-    output = f'{get_run_information()}\n{score}\n\n'
+    output = f'{get_run_information()}\n\n'
     output += get_classifier_model(model) + '\n'
     output += get_summary(model, ds, pred)
     now = datetime.now()
