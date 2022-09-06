@@ -2,6 +2,7 @@ import panel as pn
 import sklearn.linear_model as linear_model
 import sklearn.svm as svm
 import sklearn.datasets as datasets
+from sklearn.metrics import classification_report
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
@@ -103,7 +104,7 @@ def evaluate(event=None):
 
     output = f'{get_run_information()}\n{score}\n\n'
     output += get_classifier_model(model) + '\n'
-    output += get_summary(model, pred, ds.target)
+    output += get_summary(model, ds, pred)
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     key = f'{current_time} - {ds_widget.value} - {algo_widget.value}'
@@ -113,19 +114,26 @@ def evaluate(event=None):
     result_list_widget.value = key
 
 
-def get_detailed_accuracy_by_class():
-    pass
+def get_detailed_accuracy_by_class(target, pred, target_names):
+    info = '=== Detailed Accuracy By Class ===\n\n'
+    info += classification_report(target, pred, target_names=target_names)
+    info += '\n'
+    return info
 
 
-def get_confusion_matrix():
-    pass
+def get_confusion_matrix(target, pred, labels):
+    matrix = metrics.confusion_matrix(target, pred)
+    info = '=== Confusion Matrix ===\n\n'
+    info += '\n'.join([''.join(['{:4}'.format(item) for item in row]) + ' | {}'.format(label) for row, label in zip(matrix, labels)])
+    return info
 
 
-def get_summary(model, pred, target):
+def get_summary(model, dataset, pred):
     info = '=== Summary ===\n'
     info += '\n'
-    mean_abs_err = metrics.mean_absolute_error(target, pred)
-    mean_prior_abs_error = metrics.mean_absolute_error(target, [1 / len(target)] * len(target))
+    target = dataset.target
+    mean_abs_err = metrics.mean_absolute_error(dataset.target, pred)
+    mean_prior_abs_error = metrics.mean_absolute_error(dataset.target, [1 / len(target)] * len(target))
     root_mean_squared_err = math.sqrt(metrics.mean_squared_error(target, pred))
     root_mean_prior_squared_err = math.sqrt(metrics.mean_squared_error(target, [1 / len(target)] * len(target)))
     if is_regressor(model):
@@ -145,7 +153,9 @@ def get_summary(model, pred, target):
         info += f'Root mean squared error:\t\t\t{math.sqrt(metrics.mean_squared_error(target, pred)):.4f}\n'
         info += f'Relative absolute error:\t\t\t{100 * mean_abs_err / mean_prior_abs_error:.4f} %\n'
         info += f'Root relative squared error:\t\t{100 * root_mean_squared_err / root_mean_prior_squared_err:.4f} %\n'
-        info += f'Total Number of Instances:\t\t\t{len(target)}\n'
+        info += f'Total Number of Instances:\t\t\t{len(target)}\n\n'
+        info += get_detailed_accuracy_by_class(target, pred, dataset.target_names)
+        info += get_confusion_matrix(target, pred, dataset.target_names)
     else:
         raise Exception("Unknown type of model:" + str(model))
 
