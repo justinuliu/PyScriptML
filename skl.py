@@ -88,11 +88,14 @@ def get_classifier_model(model):
 def evaluate(event=None):
     ds = ds_opts[ds_widget.value]()
     model = classifier_opts[algo_widget.value]()
+    y_test = None
 
     if test_options_widget.value == 'Use training set':
+        y_test = ds.target
         model.fit(ds.data, ds.target)
         pred = model.predict(ds.data)
     elif test_options_widget.value == 'Cross-validation':
+        y_test = ds.target
         pred = cross_val_predict(model, ds.data, ds.target, cv=cv_widget.value)
     elif test_options_widget.value == 'Percentage split':
         X_train, X_test, y_train, y_test = train_test_split(ds.data, ds.target, train_size=ps_widget.value / 100)
@@ -101,7 +104,7 @@ def evaluate(event=None):
 
     output = f'{get_run_information()}\n\n'
     output += get_classifier_model(model) + '\n'
-    output += get_summary(model, ds, pred)
+    output += get_summary(model, ds, y_test, pred)
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     key = f'{current_time} - {ds_widget.value} - {algo_widget.value}'
@@ -125,12 +128,12 @@ def get_confusion_matrix(target, pred, labels):
     return info
 
 
-def get_summary(model, dataset, pred):
+def get_summary(model, dataset, y_test, pred):
     info = '=== Summary ===\n'
     info += '\n'
-    target = dataset.target
-    mean_abs_err = metrics.mean_absolute_error(dataset.target, pred)
-    mean_prior_abs_error = metrics.mean_absolute_error(dataset.target, [1 / len(target)] * len(target))
+    target = y_test
+    mean_abs_err = metrics.mean_absolute_error(target, pred)
+    mean_prior_abs_error = metrics.mean_absolute_error(target, [1 / len(target)] * len(target))
     root_mean_squared_err = math.sqrt(metrics.mean_squared_error(target, pred))
     root_mean_prior_squared_err = math.sqrt(metrics.mean_squared_error(target, [1 / len(target)] * len(target)))
     if is_regressor(model):
